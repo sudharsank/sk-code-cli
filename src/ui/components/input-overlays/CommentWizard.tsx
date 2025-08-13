@@ -74,7 +74,6 @@ export default function CommentWizard({defaultTarget, onRun, onCancel}: Props) {
           filterExts={showAll ? undefined : JS_TS_EXTS}
           initialQuery={target}
         />
-        <Text dimColor>Press 'a' to toggle showing all files. Esc to cancel.</Text>
       </Box>
     );
   }
