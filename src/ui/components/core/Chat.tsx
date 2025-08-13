@@ -7,10 +7,12 @@ import MessageHistory from './MessageHistory.js';
 import MessageInput from './MessageInput.js';
 import TokenMetrics from '../display/TokenMetrics.js';
 import PendingToolApproval from '../input-overlays/PendingToolApproval.js';
+import CommentApproval from '../input-overlays/CommentApproval.js';
 import Login from '../input-overlays/Login.js';
 import ModelSelector from '../input-overlays/ModelSelector.js';
 import MaxIterationsContinue from '../input-overlays/MaxIterationsContinue.js';
 import {handleSlashCommand} from '../../../commands/index.js';
+import CommentWizard from '../input-overlays/CommentWizard.js';
 
 interface ChatProps {
 	agent: Agent;
@@ -66,6 +68,15 @@ export default function Chat({agent}: ChatProps) {
 	const [showInput, setShowInput] = useState(true);
 	const [showLogin, setShowLogin] = useState(false);
 	const [showModelSelector, setShowModelSelector] = useState(false);
+	const [showCommentOptions, setShowCommentOptions] = useState(false);
+	const [commentTarget, setCommentTarget] = useState<string | undefined>(undefined);
+	const [commentApproval, setCommentApproval] = useState<{
+		show: boolean;
+		filePath?: string;
+		oldText?: string;
+		newText?: string;
+		resolve?: (approved: boolean, autoApproveSession?: boolean) => void;
+	}>({ show: false });
 
 	// Handle global keyboard shortcuts
 	useInput((input, key) => {
@@ -111,6 +122,13 @@ export default function Chat({agent}: ChatProps) {
 					setShowModelSelector,
 					toggleReasoning,
 					showReasoning,
+					setShowCommentOptions: ({show, target}) => {
+						setShowCommentOptions(show);
+						setCommentTarget(target);
+					},
+					setShowCommentApproval: ({ show, filePath, oldText, newText, resolve }) => {
+						setCommentApproval({ show, filePath, oldText, newText, resolve });
+					},
 				});
 				return;
 			}
@@ -202,12 +220,60 @@ export default function Chat({agent}: ChatProps) {
 						onReject={() => handleApproval(false, false)}
 						onApproveWithAutoSession={() => handleApproval(true, true)}
 					/>
+					) : commentApproval.show ? (
+						<CommentApproval
+							filePath={commentApproval.filePath || ''}
+							oldText={commentApproval.oldText}
+							newText={commentApproval.newText}
+							onApprove={(auto) => {
+								commentApproval.resolve?.(true, auto);
+								if (auto) {
+									// Reuse existing toggle for session auto-approve indicator
+									if (!sessionAutoApprove) toggleAutoApprove();
+								}
+								setCommentApproval({ show: false });
+							}}
+							onReject={() => {
+								commentApproval.resolve?.(false, false);
+								setCommentApproval({ show: false });
+							}}
+						/>
 				) : pendingMaxIterations ? (
 					<MaxIterationsContinue
 						maxIterations={pendingMaxIterations.maxIterations}
 						onContinue={() => respondToMaxIterations(true)}
 						onStop={() => respondToMaxIterations(false)}
 					/>
+				) : showCommentOptions ? (
+					<CommentWizard
+						defaultTarget={commentTarget}
+						onRun={({target, useLLM, dryRun, overwrite, interactive}) => {
+							setShowCommentOptions(false);
+                            const flags = [useLLM ? '--llm' : '', dryRun ? '--dry-run' : '', overwrite ? '--overwrite' : '', interactive ? '--interactive' : '']
+                                .filter(Boolean)
+                                .join(' ');
+                            const finalCmd = `/comment ${target} ${flags}`.trim();
+                            handleSlashCommand(finalCmd, {
+                                addMessage,
+                                clearHistory,
+                                setShowLogin,
+                                setShowModelSelector,
+                                toggleReasoning,
+                                showReasoning,
+                                setShowCommentOptions: ({show, target}) => {
+                                    setShowCommentOptions(show);
+                                    setCommentTarget(target);
+                                },
+								setShowCommentApproval: ({ show, filePath, oldText, newText, resolve }) => {
+									setCommentApproval({ show, filePath, oldText, newText, resolve });
+								},
+                            });
+                        }}
+                        onCancel={() => {
+                            setShowCommentOptions(false);
+                            addMessage({ role: 'system', content: 'Comment canceled.' });
+                        }}
+                    />
 				) : showLogin ? (
 					<Login onSubmit={handleLogin} onCancel={handleLoginCancel} />
 				) : showModelSelector ? (

@@ -19,6 +19,9 @@
 		"dist"
 	],
 	"dependencies": {
+		"@babel/generator": "^7.28.0",
+		"@babel/parser": "^7.28.0",
+		"@babel/traverse": "^7.28.0",
 		"chalk": "^5.4.1",
 		"commander": "^14.0.0",
 		"groq-sdk": "^0.27.0",
@@ -28,6 +31,8 @@
 	},
 	"devDependencies": {
 		"@sindresorhus/tsconfig": "^3.0.1",
+		"@types/babel__generator": "^7.27.0",
+		"@types/babel__traverse": "^7.28.0",
 		"@types/react": "^19.1.8",
 		"@vdemedes/prettier-config": "^2.0.1",
 		"ava": "^5.2.0",

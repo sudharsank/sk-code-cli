@@ -2,6 +2,8 @@ import {useState, useEffect} from 'react';
 import {Box, Text, useInput} from 'ink';
 import {getCommandNames} from '../../../commands/index.js';
 import SlashCommandSuggestions from '../input-overlays/SlashCommandSuggestions.js';
+import { FilePicker } from '../input-overlays/FilePicker.js';
+import path from 'path';
 
 interface MessageInputProps {
 	value: string;
@@ -22,6 +24,8 @@ export default function MessageInput({
 	const [historyIndex, setHistoryIndex] = useState(-1);
 	const [draftMessage, setDraftMessage] = useState('');
 	const [cursorPosition, setCursorPosition] = useState(value.length);
+	const [showFilePicker, setShowFilePicker] = useState(false);
+	const [filePickerQuery, setFilePickerQuery] = useState('');
 
 	const isSlashCommand = value.startsWith('/');
 	const showSlashCommands = isSlashCommand;
@@ -38,7 +42,11 @@ export default function MessageInput({
 		}
 	}, [value]);
 
-	useInput((input, key) => {
+       useInput((input, key) => {
+	       if (showFilePicker) {
+		       // Let FilePicker handle input
+		       return;
+	       }
 		if (key.return) {
 			if (isSlashCommand) {
 				// Auto-complete to selected command
@@ -143,55 +151,90 @@ export default function MessageInput({
 			return;
 		}
 
-		// Regular character input
-		if (input && !key.meta && !key.ctrl) {
-			const processedInput = input.replace(/[\r\n]+/g, ' ');
-			const newValue =
-				value.slice(0, cursorPosition) +
-				processedInput +
-				value.slice(cursorPosition);
-			onChange(newValue);
-			setCursorPosition(prev => prev + processedInput.length);
-			setSelectedCommandIndex(0);
-			setHistoryIndex(-1);
-		}
-	});
+	       // File picker trigger: '@' (only if not already showing picker)
+	       if (input === '@' && !key.meta && !key.ctrl && !showFilePicker) {
+		       setShowFilePicker(true);
+		       setFilePickerQuery('');
+		       return;
+	       }
+	       // Regular character input
+	       if (input && !key.meta && !key.ctrl) {
+		       const processedInput = input.replace(/[\r\n]+/g, ' ');
+		       const newValue =
+			       value.slice(0, cursorPosition) +
+			       processedInput +
+			       value.slice(cursorPosition);
+		       onChange(newValue);
+		       setCursorPosition(prev => prev + processedInput.length);
+		       setSelectedCommandIndex(0);
+		       setHistoryIndex(-1);
+	       }
+       });
 
-	const displayValue = value || placeholder;
-	const isPlaceholder = !value;
+       const displayValue = value || placeholder;
+       const isPlaceholder = !value;
 
-	return (
-		<Box flexDirection="column">
-			<Box>
-				<Text color="cyan" bold>
-					{'>'}{' '}
-				</Text>
-				<Box flexGrow={1}>
-					{isPlaceholder ? (
-						<Text color="gray">
-							<Text backgroundColor="cyan" color="white">
-								{' '}
-							</Text>
-							{placeholder}
-						</Text>
-					) : (
-						<Text color="gray">
-							{value.slice(0, cursorPosition)}
-							<Text backgroundColor="cyan" color="white">
-								{cursorPosition < value.length ? value[cursorPosition] : ' '}
-							</Text>
-							{value.slice(cursorPosition + 1)}
-						</Text>
-					)}
-				</Box>
-			</Box>
-			{showSlashCommands && (
-				<SlashCommandSuggestions
-					input={value}
-					selectedIndex={selectedCommandIndex}
-					onSelect={(command: string) => onSubmit('/' + command)}
-				/>
-			)}
-		</Box>
-	);
+       // Handler for file selection
+       const handleFileSelect = (file: string) => {
+	       setShowFilePicker(false);
+	       if (!file) return;
+	       // Insert file path at cursor position, replacing the '@' that triggered it
+	       let insertAt = cursorPosition;
+	       let newValue = value;
+	       // If the last char before cursor is '@', replace it
+	       if (value[cursorPosition - 1] === '@') {
+		       newValue = value.slice(0, cursorPosition - 1) + file + value.slice(cursorPosition);
+		       onChange(newValue);
+		       setCursorPosition(cursorPosition - 1 + file.length);
+	       } else {
+		       newValue = value.slice(0, cursorPosition) + file + value.slice(cursorPosition);
+		       onChange(newValue);
+		       setCursorPosition(cursorPosition + file.length);
+	       }
+       };
+
+       return (
+	       <Box flexDirection="column">
+		       {showFilePicker ? (
+			       <FilePicker
+				       rootDir={process.cwd()}
+				       onSelect={handleFileSelect}
+				       initialQuery={filePickerQuery}
+			       />
+		       ) : (
+			       <>
+				       <Box>
+					       <Text color="cyan" bold>
+						       {'>'}{' '}
+					       </Text>
+					       <Box flexGrow={1}>
+						       {isPlaceholder ? (
+							       <Text color="gray">
+								       <Text backgroundColor="cyan" color="white">
+									       {' '}
+								       </Text>
+								       {placeholder}
+							       </Text>
+						       ) : (
+							       <Text color="gray">
+								       {value.slice(0, cursorPosition)}
+								       <Text backgroundColor="cyan" color="white">
+									       {cursorPosition < value.length ? value[cursorPosition] : ' '}
+								       </Text>
+								       {value.slice(cursorPosition + 1)}
+							       </Text>
+						       )}
+					       </Box>
+				       </Box>
+				       {showSlashCommands && (
+					       <SlashCommandSuggestions
+						       input={value}
+						       selectedIndex={selectedCommandIndex}
+						       onSelect={(command: string) => onSubmit('/' + command)}
+					       />
+				       )}
+			       </>
+		       )}
+	       </Box>
+       );
 }

@@ -3,8 +3,10 @@ import {Command} from 'commander';
 import chalk from 'chalk';
 import {render} from 'ink';
 import React from 'react';
+
 import {Agent} from './agent.js';
 import App from '../ui/App.js';
+import registerCommentCommand from '../commands/definitions/comment.js';
 
 const program = new Command();
 
@@ -15,15 +17,6 @@ async function startChat(
 ): Promise<void> {
 	console.log(
 		chalk.hex('#FF4500')(`                             
-  ██████    ██████   ██████   ██████
- ███░░███░░███░░░██ ███░░███ ███░░███ 
-░███ ░███ ░███ ░░░ ░███ ░███░███ ░███ 
-░███ ░███ ░███     ░███ ░███░███ ░███ 
-░░███░███ ░███     ░░██████ ░░███░███ 
- ░░░░░███ ░░░░      ░░░░░░   ░░░░░███ 
- ██  ░███                        ░███ 
-░░██████                         ░███
- ░░░░░░                          ░░░ 
                         ███          
                       ░░███           
   ██████   ██████   ███████   ██████  
@@ -47,23 +40,27 @@ async function startChat(
 	}
 }
 
+
 program
-	.name('groq')
-	.description('Groq Code CLI')
-	.version('1.0.2')
-	.option(
-		'-t, --temperature <temperature>',
-		'Temperature for generation',
-		parseFloat,
-		1.0,
-	)
-	.option('-s, --system <message>', 'Custom system message')
-	.option(
-		'-d, --debug',
-		'Enable debug logging to debug-agent.log in current directory',
-	)
-	.action(async options => {
-		await startChat(options.temperature, options.system || null, options.debug);
-	});
+   .name('groq')
+   .description('Groq Code CLI')
+   .version('1.0.2')
+   .option(
+	   '-t, --temperature <temperature>',
+	   'Temperature for generation',
+	   parseFloat,
+	   1.0,
+   )
+   .option('-s, --system <message>', 'Custom system message')
+   .option(
+	   '-d, --debug',
+	   'Enable debug logging to debug-agent.log in current directory',
+   )
+   .action(async options => {
+	   await startChat(options.temperature, options.system || null, options.debug);
+   });
+
+// Register additional commands
+registerCommentCommand(program);
 
 program.parse();
