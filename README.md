@@ -1,6 +1,6 @@
 <h2 align="center">
  <br>
- <img src="docs/thumbnail.png" alt="Groq Code CLI" width="400">
+ <img src="docs/sk_code_grad.png" alt="SK Code CLI" width="400">
  <br>
  <br>
  Groq Code CLI: A highly customizable, lightweight, and open-source coding CLI powered by Groq for instant iteration.
